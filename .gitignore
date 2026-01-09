@@ -1,0 +1,27 @@
+# Environment variables (contains sensitive data)
+.env
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Downloaded data (regenerated from Google Sheets)
+Liquor - Sheet1.csv
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
