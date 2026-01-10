@@ -16,6 +16,18 @@ A Python-based data pipeline that downloads whiskey collection data from Google 
 
 ## Development Commands
 
+### Docker (Recommended)
+
+```bash
+# Data Operations (containerized - no Python install needed)
+./docker-run.sh sync      # Full sync: Google Sheets → PostgreSQL
+./docker-run.sh export    # Export PostgreSQL → TypeScript
+./docker-run.sh download  # Download CSV from Google Sheets only
+./docker-run.sh import    # Import CSV to PostgreSQL only
+```
+
+### Local Python (Alternative)
+
 ```bash
 # Setup
 pip install -r requirements.txt             # Install Python dependencies
@@ -24,8 +36,9 @@ psql -d liquor_db -f sql/schema.sql        # Create database schema
 # Data Operations
 python3 scripts/download_from_sheets.py    # Download CSV from Google Sheets only
 python3 scripts/import_csv.py              # Import existing CSV to database
-python3 scripts/sync_from_sheets.py        # Full sync: download + import (RECOMMENDED)
+python3 scripts/sync_from_sheets.py        # Full sync: download + import
 python3 scripts/export_to_typescript.py    # Export PostgreSQL to catalog-beta TypeScript file
+```
 
 # Database Operations
 psql -d liquor_db                          # Connect to database
@@ -165,8 +178,11 @@ liquor_app/
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # Environment variables template
 ├── .env                       # Local config (gitignored, create from .env.example)
+├── Dockerfile                 # Docker image for liquor_app scripts
+├── docker-run.sh              # Helper script to run containerized commands
 ├── .gitignore                 # Git ignore rules
 ├── GITHUB_SECRETS.md          # Guide for production secrets
+├── DOCKER.md                  # Docker setup guide
 ├── CLAUDE.md                  # Project guide for Claude Code
 ├── README.md                  # Detailed setup instructions
 └── Liquor - Sheet1.csv        # Downloaded CSV file (generated, gitignored)

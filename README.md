@@ -93,7 +93,23 @@ The Google Sheets spreadsheet must be publicly accessible:
 2. Click "Share" in the top-right
 3. Change to "Anyone with the link can view"
 
-### Sync Commands
+### Sync Commands (Docker - Recommended)
+
+```bash
+# Full sync: Google Sheets → PostgreSQL
+./docker-run.sh sync
+
+# Download CSV only
+./docker-run.sh download
+
+# Import CSV to PostgreSQL only
+./docker-run.sh import
+
+# Export PostgreSQL → TypeScript
+./docker-run.sh export
+```
+
+### Sync Commands (Local Python - Alternative)
 
 ```bash
 # One-time sync: Download latest data and update database

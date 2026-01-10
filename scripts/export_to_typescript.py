@@ -18,8 +18,13 @@ DB_CONFIG = {
     'port': os.environ.get('DB_PORT', '5432')
 }
 
-# Output file path (relative to scripts/ directory)
-OUTPUT_FILE = '../../catalog-beta/src/data/whiskey-data.ts'
+# Output file path
+# When running in Docker, /catalog-beta is mounted
+# When running locally, use relative path
+if os.path.exists('/catalog-beta'):
+    OUTPUT_FILE = '/catalog-beta/src/data/whiskey-data.ts'
+else:
+    OUTPUT_FILE = '../../catalog-beta/src/data/whiskey-data.ts'
 
 def format_value(value, field_type='string'):
     """Format a value for TypeScript output"""
@@ -131,7 +136,12 @@ export const whiskeyCollection: WhiskeyBottle[] = [
         ts_content += "];\n"
 
         # Write to file
-        output_path = os.path.join(os.path.dirname(__file__), OUTPUT_FILE)
+        # If OUTPUT_FILE is absolute, use it directly; otherwise make it relative to script dir
+        if os.path.isabs(OUTPUT_FILE):
+            output_path = OUTPUT_FILE
+        else:
+            output_path = os.path.join(os.path.dirname(__file__), OUTPUT_FILE)
+
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(ts_content)
 

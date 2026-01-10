@@ -55,17 +55,17 @@ with DAG(
 ) as dag:
 
     # Task 1: Download from Google Sheets and sync to PostgreSQL
+    # Runs in the Airflow container using mounted scripts
     sync_to_database = BashOperator(
         task_id='sync_google_sheets_to_postgres',
-        bash_command=f'cd {LIQUOR_APP_PATH} && python3 scripts/sync_from_sheets.py',
-        cwd=LIQUOR_APP_PATH,
+        bash_command='python3 /opt/airflow/scripts/sync_from_sheets.py',
     )
 
     # Task 2: Export PostgreSQL to TypeScript
+    # Runs in the Airflow container using mounted scripts
     export_to_typescript = BashOperator(
         task_id='export_postgres_to_typescript',
-        bash_command=f'cd {LIQUOR_APP_PATH} && python3 scripts/export_to_typescript.py',
-        cwd=LIQUOR_APP_PATH,
+        bash_command='python3 /opt/airflow/scripts/export_to_typescript.py',
     )
 
     # Task 3: Check if git changes exist (idempotency check)

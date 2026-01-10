@@ -341,5 +341,29 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  # Liquor App Service - Runs the Python scripts
+  liquor-app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: liquor-app
+    env_file:
+      - ${ENV_FILE_PATH:-.env}
+    environment:
+      # Database configuration (connects to host PostgreSQL)
+      DB_NAME: ${DB_NAME:-liquor_db}
+      DB_USER: ${DB_USER:-jonny}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}/scripts:/app/scripts
+      - ${AIRFLOW_PROJ_DIR:-.}/sql:/app/sql
+      - ${CATALOG_BETA_HOST_PATH:-/Users/jonny/Projects/catalog-beta}:/catalog-beta
+    networks:
+      - default
+    command: tail -f /dev/null  # Keep container running
+    restart: unless-stopped
+
 volumes:
   postgres-db-volume:
