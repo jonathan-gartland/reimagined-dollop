@@ -6,6 +6,11 @@
 venv/
 env/
 
+# Airflow
+logs/
+config/
+plugins/
+
 # Python
 __pycache__/
 *.py[cod]

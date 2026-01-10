@@ -32,11 +32,11 @@ psql -d liquor_db                          # Connect to database
 psql -d liquor_db -f sql/queries.sql       # Run example queries
 pg_dump -d liquor_db -f backup.sql         # Backup database
 
-# Airflow Operations (Automated Workflow)
-cd ~/airflow && ./run-dag.sh                    # Quick run: sync + commit + push
-cd ~/airflow && ./start-airflow.sh scheduler    # Start scheduler (Terminal 1)
-cd ~/airflow && ./start-airflow.sh webserver    # Start web UI (Terminal 2)
-# Access UI: http://localhost:8080
+# Airflow Operations (Docker - Recommended)
+cd /Users/jonny/Projects/liquor_app/airflow && ./start.sh  # Start all services
+cd /Users/jonny/Projects/liquor_app/airflow && ./stop.sh   # Stop all services
+docker compose logs -f                                      # View logs
+# Access UI: http://localhost:8080 (admin/admin)
 # Trigger: whiskey_data_sync DAG (manual trigger button)
 ```
 
@@ -144,11 +144,22 @@ liquor_app/
 │   ├── sync_from_sheets.py        # Complete sync workflow (download + import)
 │   └── export_to_typescript.py    # Export PostgreSQL to TypeScript data file
 ├── dags/                      # Airflow DAGs
-│   ├── whiskey_sync_dag.py        # Airflow DAG (symlinked to ~/airflow/dags/)
+│   ├── whiskey_sync_dag.py        # Airflow DAG definition
 │   └── README.md                  # DAG documentation
 ├── sql/                       # SQL files
 │   ├── schema.sql                 # Database schema with indexes
 │   └── queries.sql                # Example SQL queries
+├── airflow/                   # Airflow Docker setup
+│   ├── docker-compose.yaml        # Docker Compose configuration
+│   ├── Dockerfile                 # Custom Airflow image (with git)
+│   ├── .env                       # Airflow environment variables (gitignored)
+│   ├── .gitignore                 # Airflow-specific ignores
+│   ├── start.sh                   # Start Airflow services
+│   ├── stop.sh                    # Stop Airflow services
+│   └── README.md                  # Airflow documentation
+├── logs/                      # Airflow logs (generated, gitignored)
+├── config/                    # Airflow config (generated, gitignored)
+├── plugins/                   # Airflow plugins (empty, gitignored)
 ├── docs/                      # Documentation
 │   └── ENVIRONMENT_SETUP.md       # Environment variables guide
 ├── requirements.txt           # Python dependencies
@@ -216,16 +227,16 @@ Apache Airflow automates the complete workflow including git commit/push:
 4. Pushes to GitHub automatically
 5. Skips commit/push if no data changes (idempotency)
 
-**Start Airflow:**
+**Start Airflow (Docker):**
 ```bash
-# Terminal 1 - Start scheduler
-cd ~/airflow && ./start-airflow.sh scheduler
-
-# Terminal 2 - Start web UI
-cd ~/airflow && ./start-airflow.sh webserver
-
-# Access at http://localhost:8080
+cd /Users/jonny/Projects/liquor_app/airflow
+./start.sh                    # Starts all services in Docker
 ```
+
+**Access Web UI:**
+- URL: http://localhost:8080
+- Username: `admin`
+- Password: `admin`
 
 **Trigger Sync:**
 - Open http://localhost:8080
@@ -233,19 +244,25 @@ cd ~/airflow && ./start-airflow.sh webserver
 - Click the "Play" button (▶) to trigger manually
 - Monitor execution in Graph view
 
+**Stop Airflow:**
+```bash
+cd /Users/jonny/Projects/liquor_app/airflow
+./stop.sh                     # Stops all services
+```
+
 **Configuration:**
-- DAG file: `dags/whiskey_sync_dag.py` (symlinked to `~/airflow/dags/`)
-- Airflow documentation: `~/airflow/README.md`
+- Docker setup: `airflow/docker-compose.yaml`
+- Environment variables: `airflow/.env` (gitignored)
+- DAG file: `dags/whiskey_sync_dag.py`
+- Airflow documentation: `airflow/README.md`
 - Currently set to manual trigger only (no automatic schedule)
 - To enable scheduled runs: Edit `schedule=None` in the DAG file
-- Version controlled with project code (follows Airflow best practices)
 
 **Requirements:**
-- Python 3.12 (via pyenv)
-- Airflow 3.0.6 (installed in `~/airflow/venv`)
-- PostgreSQL running
+- Docker Desktop installed and running
+- PostgreSQL running on host machine
 - SSH key loaded for GitHub push
-- Node.js in PATH (for git hooks)
+- catalog-beta repository at `/Users/jonny/Projects/catalog-beta`
 
 ### Changing Spreadsheet ID
 

@@ -1,0 +1,7 @@
+# Airflow Docker - Ignore generated files
+
+# Don't commit .env (contains sensitive data)
+.env
+
+# Logs are generated, not source
+*.log
