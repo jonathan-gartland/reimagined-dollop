@@ -5,7 +5,9 @@
       "Bash(pyenv versions:*)",
       "Bash(export AIRFLOW_HOME=~/airflow)",
       "Bash(source:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "WebSearch",
+      "Bash(docker compose build:*)"
     ]
   }
 }
