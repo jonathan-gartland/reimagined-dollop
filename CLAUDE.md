@@ -4,53 +4,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Python-based data pipeline that downloads whiskey collection data from Google Sheets and syncs it to a PostgreSQL database. This project serves as the data source for the Next.js web application in the sibling `catalog-beta` directory.
+A Python-based data pipeline that syncs whiskey collection data from Google Sheets to PostgreSQL and exports to TypeScript for a Next.js web app. The project is fully containerized with Docker and includes optional Airflow automation for scheduled syncing with automatic git commits.
 
 ## Technology Stack
 
-- **Language**: Python 3.7+
-- **Database**: PostgreSQL 12+
-- **Dependencies**: psycopg2-binary (PostgreSQL adapter), python-dotenv (environment variables)
-- **Data Source**: Google Sheets (publicly accessible spreadsheet)
-- **Automation**: Apache Airflow 3.0.6 (optional, for automated syncing)
+- **Language**: Python 3.12 (containerized)
+- **Database**: PostgreSQL (host machine)
+- **Containerization**: Docker Compose
+- **Automation**: Apache Airflow 3.1.5 (Docker)
+- **Data Source**: Google Sheets (public CSV export)
+- **Target**: Next.js app in sibling `catalog-beta` directory
 
 ## Development Commands
 
-### Docker (Recommended)
+### Docker (Recommended - No Python Required)
 
 ```bash
-# Data Operations (containerized - no Python install needed)
+# Data Operations
 ./docker-run.sh sync      # Full sync: Google Sheets → PostgreSQL
 ./docker-run.sh export    # Export PostgreSQL → TypeScript
-./docker-run.sh download  # Download CSV from Google Sheets only
-./docker-run.sh import    # Import CSV to PostgreSQL only
-```
-
-### Local Python (Alternative)
-
-```bash
-# Setup
-pip install -r requirements.txt             # Install Python dependencies
-psql -d liquor_db -f sql/schema.sql        # Create database schema
-
-# Data Operations
-python3 scripts/download_from_sheets.py    # Download CSV from Google Sheets only
-python3 scripts/import_csv.py              # Import existing CSV to database
-python3 scripts/sync_from_sheets.py        # Full sync: download + import
-python3 scripts/export_to_typescript.py    # Export PostgreSQL to catalog-beta TypeScript file
-```
+./docker-run.sh download  # Download CSV only
+./docker-run.sh import    # Import CSV only
 
 # Database Operations
 psql -d liquor_db                          # Connect to database
 psql -d liquor_db -f sql/queries.sql       # Run example queries
 pg_dump -d liquor_db -f backup.sql         # Backup database
 
-# Airflow Operations (Docker - Recommended)
-cd /Users/jonny/Projects/liquor_app/airflow && ./start.sh  # Start all services
-cd /Users/jonny/Projects/liquor_app/airflow && ./stop.sh   # Stop all services
-docker compose logs -f                                      # View logs
-# Access UI: http://localhost:8080 (admin/admin)
-# Trigger: whiskey_data_sync DAG (manual trigger button)
+# Airflow Automation
+cd airflow && ./start.sh                   # Start all Airflow services
+cd airflow && ./stop.sh                    # Stop all services
+docker compose logs -f                     # View logs
+# UI: http://localhost:8080 (admin/admin)
+
+# Container Management
+cd airflow && docker compose ps            # View running containers
+cd airflow && docker compose build         # Rebuild images
+```
+
+### Local Python (Alternative)
+
+```bash
+# Setup
+pip install -r requirements.txt
+psql -d liquor_db -f sql/schema.sql
+
+# Run Scripts
+python3 scripts/sync_from_sheets.py
+python3 scripts/export_to_typescript.py
 ```
 
 ## Architecture
@@ -58,26 +59,47 @@ docker compose logs -f                                      # View logs
 ### Data Flow
 
 ```
-Google Sheets (Public)
-    ↓ (download_from_sheets.py)
-CSV File (Liquor - Sheet1.csv)
-    ↓ (import_csv.py)
-PostgreSQL (liquor_db)
-    ↓ (export_to_typescript.py)
-catalog-beta/src/data/whiskey-data.ts (Next.js app)
+Google Sheets (Public Spreadsheet)
+    ↓
+[download_from_sheets.py] → CSV File
+    ↓
+[import_csv.py] → PostgreSQL (liquor_db)
+    ↓
+[export_to_typescript.py] → catalog-beta/src/data/whiskey-data.ts
+    ↓
+Next.js Web App (catalog-beta)
+```
+
+### Docker Architecture
+
+```
+liquor-app container (Python 3.12)
+├── Runs sync/export scripts
+├── Connects to host PostgreSQL via host.docker.internal
+└── Mounts catalog-beta for TypeScript export
+
+Airflow containers (optional automation)
+├── airflow-apiserver (Web UI :8080)
+├── airflow-scheduler (DAG orchestration)
+├── airflow-worker (task execution)
+├── airflow-dag-processor (DAG parsing)
+├── airflow-triggerer (deferred tasks)
+├── postgres (Airflow metadata)
+└── redis (message broker)
 ```
 
 ### Sync Process
 
-The `sync_from_sheets.py` script performs a complete end-to-end sync:
+**Full refresh workflow** (not incremental):
 
-1. **Download**: Fetches CSV export from Google Sheets using public export URL
-2. **Parse**: Reads CSV and transforms data types (dates, numbers, etc.)
-3. **Refresh**: Truncates existing database table
-4. **Import**: Batch inserts all rows using `execute_values` for performance
-5. **Report**: Shows before/after record counts
+1. **Download**: Fetches CSV from Google Sheets public export URL
+2. **Parse**: Transforms data types (dates → DATE, prices → NUMERIC, etc.)
+3. **Truncate**: Clears existing PostgreSQL table
+4. **Batch Insert**: Uses `execute_values` for fast bulk import
+5. **Export**: Generates TypeScript file with camelCase column mapping
+6. **Commit** (Airflow only): Auto-commits and pushes to GitHub if changes detected
 
-**Important**: This is a full refresh, not an incremental sync. The database is cleared and rebuilt on each run.
+**Key Behavior**: Every sync completely replaces the database to ensure consistency with Google Sheets.
 
 ### Google Sheets Configuration
 
@@ -188,97 +210,101 @@ liquor_app/
 └── Liquor - Sheet1.csv        # Downloaded CSV file (generated, gitignored)
 ```
 
-## Relationship to catalog-beta
+## Integration with catalog-beta
 
-The **catalog-beta** project (Next.js web app) uses this data via a TypeScript data file (`src/data/whiskey-data.ts`). The workflow to update the web app is:
+**Purpose**: Exports PostgreSQL data as TypeScript for the Next.js web app
 
-1. Update Google Sheets with new bottles
-2. Run `python3 sync_from_sheets.py` to update PostgreSQL
-3. Run `python3 export_to_typescript.py` to generate the TypeScript data file
+**Export Process**:
+- Target: `../catalog-beta/src/data/whiskey-data.ts`
+- Column mapping: snake_case → camelCase (e.g., `country_of_origin` → `country`)
+- Date format: PostgreSQL DATE → `M/D/YYYY` string
+- Null handling: Empty strings for text, 0 for numbers
+- Output: `whiskeyCollection` array of `WhiskeyBottle` objects
 
-**Export Details**:
-- The export script queries PostgreSQL and generates a TypeScript file at `../catalog-beta/src/data/whiskey-data.ts`
-- Column mapping: PostgreSQL snake_case → TypeScript camelCase (e.g., `country_of_origin` → `country`, `price_cost` → `purchasePrice`)
-- The TypeScript file exports a `whiskeyCollection` array conforming to the `WhiskeyBottle` interface
-- Empty/null values are handled appropriately (empty strings for text, 0 for numbers)
-- Date formatting: Converts PostgreSQL dates to `M/D/YYYY` format for consistency with the web app
+**Path Detection**:
+- Docker: Uses `/catalog-beta` (mounted volume)
+- Local: Uses `../../catalog-beta` (relative path)
+- Auto-detects environment via `os.path.exists('/catalog-beta')`
 
-## Common Tasks
+**Workflow**:
+1. Edit Google Sheets
+2. Run `./docker-run.sh sync` → Updates PostgreSQL
+3. Run `./docker-run.sh export` → Generates TypeScript
+4. (Optional) Airflow DAG does all steps + git commit/push
+
+## Common Workflows
 
 ### Initial Setup
 
 ```bash
-# 1. Create database
+# 1. Create database and schema
 createdb liquor_db
-
-# 2. Create schema
 psql -d liquor_db -f sql/schema.sql
 
-# 3. First sync
-python3 scripts/sync_from_sheets.py
+# 2. First sync (Docker)
+./docker-run.sh sync
+
+# 3. Export to catalog-beta
+./docker-run.sh export
+
+# 4. (Optional) Start Airflow
+cd airflow && ./start.sh
 ```
 
-### Regular Syncing
+### Manual Sync
 
 ```bash
-# One-time sync to PostgreSQL
-python3 scripts/sync_from_sheets.py
+# Sync only
+./docker-run.sh sync
 
-# Full sync to PostgreSQL and export to Next.js app
-python3 scripts/sync_from_sheets.py && python3 scripts/export_to_typescript.py
+# Sync + Export
+./docker-run.sh sync && ./docker-run.sh export
+```
 
-# Or set up cron for automatic syncing (example: daily at 2 AM)
+### Scheduled Automation
+
+Use Airflow (recommended) or cron:
+
+```bash
+# Airflow: Web UI → Trigger whiskey_data_sync DAG
+# Or edit schedule in dags/whiskey_sync_dag.py
+
+# Cron alternative:
 crontab -e
-# Add: 0 2 * * * cd /Users/jonny/Projects/liquor_app && python3 scripts/sync_from_sheets.py && python3 scripts/export_to_typescript.py >> sync.log 2>&1
+# Add: 0 2 * * * cd /path/to/liquor_app && ./docker-run.sh sync && ./docker-run.sh export
 ```
 
-### Automated Syncing with Airflow (Recommended)
+### Airflow Automation (Optional)
 
-Apache Airflow automates the complete workflow including git commit/push:
+**Purpose**: Automates the complete workflow with git commit/push
 
-**What It Does:**
-1. Syncs Google Sheets → PostgreSQL
-2. Exports PostgreSQL → TypeScript (catalog-beta)
-3. Commits changes with conventional commit message
-4. Pushes to GitHub automatically
-5. Skips commit/push if no data changes (idempotency)
+**DAG Flow** (`whiskey_data_sync`):
+1. `sync_google_sheets_to_postgres` - Downloads and imports data
+2. `export_postgres_to_typescript` - Generates TypeScript file
+3. `check_for_git_changes` - Detects if file changed (idempotency)
+4. `git_commit_changes` - Creates conventional commit (skipped if no changes)
+5. `git_push_to_remote` - Pushes to GitHub (skipped if no changes)
 
-**Start Airflow (Docker):**
+**Quick Start:**
 ```bash
-cd /Users/jonny/Projects/liquor_app/airflow
-./start.sh                    # Starts all services in Docker
-```
-
-**Access Web UI:**
-- URL: http://localhost:8080
-- Username: `admin`
-- Password: `admin`
-
-**Trigger Sync:**
-- Open http://localhost:8080
-- Find `whiskey_data_sync` DAG
-- Click the "Play" button (▶) to trigger manually
-- Monitor execution in Graph view
-
-**Stop Airflow:**
-```bash
-cd /Users/jonny/Projects/liquor_app/airflow
-./stop.sh                     # Stops all services
+cd airflow
+./start.sh                    # Start all services
+# Open http://localhost:8080 (admin/admin)
+# Click play button on whiskey_data_sync DAG
+./stop.sh                     # Stop when done
 ```
 
 **Configuration:**
-- Docker setup: `airflow/docker-compose.yaml`
-- Environment variables: `airflow/.env` (gitignored)
-- DAG file: `dags/whiskey_sync_dag.py`
-- Airflow documentation: `airflow/README.md`
-- Currently set to manual trigger only (no automatic schedule)
-- To enable scheduled runs: Edit `schedule=None` in the DAG file
+- Manual trigger only (set `schedule=None` in DAG)
+- To enable scheduled runs: Change schedule parameter (e.g., `schedule='0 2 * * *'` for daily 2 AM)
+- Environment: `airflow/.env` (gitignored)
+- DAG definition: `dags/whiskey_sync_dag.py`
 
 **Requirements:**
-- Docker Desktop installed and running
-- PostgreSQL running on host machine
-- SSH key loaded for GitHub push
-- catalog-beta repository at `/Users/jonny/Projects/catalog-beta`
+- Docker Desktop running
+- PostgreSQL on host (accessible via `host.docker.internal`)
+- SSH key for GitHub push (~/.ssh/ mounted in containers)
+- catalog-beta at `/Users/jonny/Projects/catalog-beta`
 
 ### Changing Spreadsheet ID
 
