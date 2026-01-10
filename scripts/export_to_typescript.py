@@ -18,8 +18,8 @@ DB_CONFIG = {
     'port': os.environ.get('DB_PORT', '5432')
 }
 
-# Output file path
-OUTPUT_FILE = '../catalog-beta/src/data/whiskey-data.ts'
+# Output file path (relative to scripts/ directory)
+OUTPUT_FILE = '../../catalog-beta/src/data/whiskey-data.ts'
 
 def format_value(value, field_type='string'):
     """Format a value for TypeScript output"""

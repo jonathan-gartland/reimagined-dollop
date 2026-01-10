@@ -57,14 +57,14 @@ with DAG(
     # Task 1: Download from Google Sheets and sync to PostgreSQL
     sync_to_database = BashOperator(
         task_id='sync_google_sheets_to_postgres',
-        bash_command=f'cd {LIQUOR_APP_PATH} && python3 sync_from_sheets.py',
+        bash_command=f'cd {LIQUOR_APP_PATH} && python3 scripts/sync_from_sheets.py',
         cwd=LIQUOR_APP_PATH,
     )
 
     # Task 2: Export PostgreSQL to TypeScript
     export_to_typescript = BashOperator(
         task_id='export_postgres_to_typescript',
-        bash_command=f'cd {LIQUOR_APP_PATH} && python3 export_to_typescript.py',
+        bash_command=f'cd {LIQUOR_APP_PATH} && python3 scripts/export_to_typescript.py',
         cwd=LIQUOR_APP_PATH,
     )
 

@@ -66,7 +66,7 @@ CREATE DATABASE liquor_db;
 
 4. Create the schema:
 ```bash
-psql -d liquor_db -f schema.sql
+psql -d liquor_db -f sql/schema.sql
 ```
 
 5. Import the CSV data:
@@ -79,7 +79,7 @@ export DB_HOST=localhost
 export DB_PORT=5432
 
 # Run import script
-python3 import_csv.py
+python3 scripts/import_csv.py
 ```
 
 ## Syncing with Google Sheets
@@ -97,10 +97,10 @@ The Google Sheets spreadsheet must be publicly accessible:
 
 ```bash
 # One-time sync: Download latest data and update database
-python3 sync_from_sheets.py
+python3 scripts/sync_from_sheets.py
 
 # Download CSV only (without updating database)
-python3 download_from_sheets.py
+python3 scripts/download_from_sheets.py
 ```
 
 ### Automatic Sync
@@ -112,10 +112,10 @@ To automatically sync on a schedule, set up a cron job:
 crontab -e
 
 # Add this line to sync daily at 2 AM
-0 2 * * * cd /Users/jonny/Projects/liquor_app && /usr/bin/python3 sync_from_sheets.py >> sync.log 2>&1
+0 2 * * * cd /Users/jonny/Projects/liquor_app && /usr/bin/python3 scripts/sync_from_sheets.py >> sync.log 2>&1
 
 # Or sync every hour
-0 * * * * cd /Users/jonny/Projects/liquor_app && /usr/bin/python3 sync_from_sheets.py >> sync.log 2>&1
+0 * * * * cd /Users/jonny/Projects/liquor_app && /usr/bin/python3 scripts/sync_from_sheets.py >> sync.log 2>&1
 ```
 
 **Note:** The sync script performs a full refresh (clears and re-imports all data) to ensure the database exactly matches the spreadsheet.
@@ -204,12 +204,27 @@ psql -d liquor_db -c "\COPY liquor TO 'liquor_export.csv' CSV HEADER"
 
 ## File Structure
 
-- `Liquor - Sheet1.csv` - CSV data file
-- `schema.sql` - Database schema definition
-- `import_csv.py` - Import CSV to PostgreSQL
-- `download_from_sheets.py` - Download CSV from Google Sheets
-- `sync_from_sheets.py` - Sync database with Google Sheets
-- `queries.sql` - Useful example queries
-- `requirements.txt` - Python dependencies
-- `.env.example` - Database configuration template
-- `README.md` - This file
+```
+liquor_app/
+├── scripts/                        # Python scripts
+│   ├── download_from_sheets.py        # Download CSV from Google Sheets
+│   ├── import_csv.py                  # Import CSV to PostgreSQL
+│   ├── sync_from_sheets.py            # Sync database with Google Sheets
+│   └── export_to_typescript.py        # Export PostgreSQL to TypeScript
+├── sql/                            # SQL files
+│   ├── schema.sql                     # Database schema definition
+│   └── queries.sql                    # Useful example queries
+├── dags/                           # Airflow DAGs (optional)
+│   ├── whiskey_sync_dag.py            # Automated workflow DAG
+│   └── README.md                      # DAG documentation
+├── docs/                           # Documentation
+│   └── ENVIRONMENT_SETUP.md           # Environment variables guide
+├── requirements.txt                # Python dependencies
+├── .env.example                    # Database configuration template
+├── .env                            # Local config (gitignored)
+├── .gitignore                      # Git ignore rules
+├── GITHUB_SECRETS.md               # Production deployment guide
+├── CLAUDE.md                       # Project guide for Claude Code
+├── README.md                       # This file
+└── Liquor - Sheet1.csv             # Downloaded CSV file (generated)
+```

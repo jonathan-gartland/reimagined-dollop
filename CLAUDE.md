@@ -18,19 +18,19 @@ A Python-based data pipeline that downloads whiskey collection data from Google 
 
 ```bash
 # Setup
-pip install -r requirements.txt        # Install Python dependencies
-psql -d liquor_db -f schema.sql       # Create database schema
+pip install -r requirements.txt             # Install Python dependencies
+psql -d liquor_db -f sql/schema.sql        # Create database schema
 
 # Data Operations
-python3 download_from_sheets.py       # Download CSV from Google Sheets only
-python3 import_csv.py                 # Import existing CSV to database
-python3 sync_from_sheets.py           # Full sync: download + import (RECOMMENDED)
-python3 export_to_typescript.py       # Export PostgreSQL to catalog-beta TypeScript file
+python3 scripts/download_from_sheets.py    # Download CSV from Google Sheets only
+python3 scripts/import_csv.py              # Import existing CSV to database
+python3 scripts/sync_from_sheets.py        # Full sync: download + import (RECOMMENDED)
+python3 scripts/export_to_typescript.py    # Export PostgreSQL to catalog-beta TypeScript file
 
 # Database Operations
-psql -d liquor_db                     # Connect to database
-psql -d liquor_db -f queries.sql      # Run example queries
-pg_dump -d liquor_db -f backup.sql    # Backup database
+psql -d liquor_db                          # Connect to database
+psql -d liquor_db -f sql/queries.sql       # Run example queries
+pg_dump -d liquor_db -f backup.sql         # Backup database
 
 # Airflow Operations (Automated Workflow)
 cd ~/airflow && ./run-dag.sh                    # Quick run: sync + commit + push
@@ -138,22 +138,27 @@ All parser functions handle empty values (`''`, `None`, `'-'`) by returning `Non
 
 ```
 liquor_app/
-├── dags/
-│   ├── whiskey_sync_dag.py    # Airflow DAG (symlinked to ~/airflow/dags/)
-│   └── README.md              # DAG documentation
-├── download_from_sheets.py    # Download CSV from Google Sheets
-├── import_csv.py              # Import CSV to PostgreSQL
-├── sync_from_sheets.py        # Complete sync workflow (download + import)
-├── export_to_typescript.py    # Export PostgreSQL to TypeScript data file
-├── schema.sql                 # Database schema with indexes
-├── queries.sql                # Example SQL queries
+├── scripts/                   # Python scripts
+│   ├── download_from_sheets.py    # Download CSV from Google Sheets
+│   ├── import_csv.py              # Import CSV to PostgreSQL
+│   ├── sync_from_sheets.py        # Complete sync workflow (download + import)
+│   └── export_to_typescript.py    # Export PostgreSQL to TypeScript data file
+├── dags/                      # Airflow DAGs
+│   ├── whiskey_sync_dag.py        # Airflow DAG (symlinked to ~/airflow/dags/)
+│   └── README.md                  # DAG documentation
+├── sql/                       # SQL files
+│   ├── schema.sql                 # Database schema with indexes
+│   └── queries.sql                # Example SQL queries
+├── docs/                      # Documentation
+│   └── ENVIRONMENT_SETUP.md       # Environment variables guide
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # Environment variables template
 ├── .env                       # Local config (gitignored, create from .env.example)
 ├── .gitignore                 # Git ignore rules
 ├── GITHUB_SECRETS.md          # Guide for production secrets
+├── CLAUDE.md                  # Project guide for Claude Code
 ├── README.md                  # Detailed setup instructions
-└── Liquor - Sheet1.csv        # Downloaded CSV file (generated)
+└── Liquor - Sheet1.csv        # Downloaded CSV file (generated, gitignored)
 ```
 
 ## Relationship to catalog-beta
@@ -180,24 +185,24 @@ The **catalog-beta** project (Next.js web app) uses this data via a TypeScript d
 createdb liquor_db
 
 # 2. Create schema
-psql -d liquor_db -f schema.sql
+psql -d liquor_db -f sql/schema.sql
 
 # 3. First sync
-python3 sync_from_sheets.py
+python3 scripts/sync_from_sheets.py
 ```
 
 ### Regular Syncing
 
 ```bash
 # One-time sync to PostgreSQL
-python3 sync_from_sheets.py
+python3 scripts/sync_from_sheets.py
 
 # Full sync to PostgreSQL and export to Next.js app
-python3 sync_from_sheets.py && python3 export_to_typescript.py
+python3 scripts/sync_from_sheets.py && python3 scripts/export_to_typescript.py
 
 # Or set up cron for automatic syncing (example: daily at 2 AM)
 crontab -e
-# Add: 0 2 * * * cd /Users/jonny/Projects/liquor_app && python3 sync_from_sheets.py && python3 export_to_typescript.py >> sync.log 2>&1
+# Add: 0 2 * * * cd /Users/jonny/Projects/liquor_app && python3 scripts/sync_from_sheets.py && python3 scripts/export_to_typescript.py >> sync.log 2>&1
 ```
 
 ### Automated Syncing with Airflow (Recommended)
@@ -252,7 +257,7 @@ SHEET_ID = '0'  # or your sheet's gid
 
 ### Database Queries
 
-The `queries.sql` file contains useful examples:
+The `sql/queries.sql` file contains useful examples:
 - Total bottles and investment value
 - Collection breakdown by country, type, distillery
 - Most valuable bottles
