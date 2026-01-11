@@ -20,18 +20,20 @@ cd ~
 git clone git@github.com:jonathan-gartland/reimagined-dollop.git liquor_app
 # Or use HTTPS: git clone https://github.com/jonathan-gartland/reimagined-dollop.git liquor_app
 
-# Create symlinks in Airflow directories
+# Set up Airflow environment
 cd ~/airflow
 
-# Symlink DAG files
-ln -sf ~/liquor_app/dags/whiskey_sync_dag.py dags/whiskey_sync_dag.py
-ln -sf ~/liquor_app/dags/README.md dags/README.md
+# Configure environment variables for Docker mounts
+echo "LIQUOR_APP_DIR=/root/liquor_app" >> .env
+echo "AIRFLOW__CORE__LOAD_EXAMPLES=false" >> .env
 
-# Symlink scripts directory
-ln -sf ~/liquor_app/scripts scripts
+# Copy DAG files (Docker can't follow symlinks across volume mounts)
+cp ~/liquor_app/dags/whiskey_sync_dag.py dags/
+cp ~/liquor_app/dags/README.md dags/
 
 # Restart Airflow to pick up changes
-docker compose restart airflow-scheduler airflow-dag-processor
+docker compose down
+docker compose up -d
 ```
 
 ### Update DAGs (whenever you make changes)
@@ -40,6 +42,9 @@ docker compose restart airflow-scheduler airflow-dag-processor
 # On the remote server
 cd ~/liquor_app
 git pull
+
+# Copy updated DAG files
+cp dags/whiskey_sync_dag.py ~/airflow/dags/
 
 # Restart scheduler to pick up changes
 cd ~/airflow

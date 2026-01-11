@@ -35,30 +35,33 @@ else
     git clone git@github.com:jonathan-gartland/reimagined-dollop.git liquor_app
 fi
 
-echo "Step 2: Create symlinks to Airflow directories..."
+echo "Step 2: Copy DAG files to Airflow dags directory..."
 cd ~/airflow
 
-# Remove old symlinks/files if they exist
+# Remove old files
 rm -f dags/whiskey_sync_dag.py
 rm -f dags/README.md
 
-# Symlink DAG files to Airflow dags directory
-ln -sf ~/liquor_app/dags/whiskey_sync_dag.py dags/whiskey_sync_dag.py
-ln -sf ~/liquor_app/dags/README.md dags/README.md
+# Copy DAG files (Docker can't follow symlinks across mounts)
+cp ~/liquor_app/dags/whiskey_sync_dag.py dags/
+cp ~/liquor_app/dags/README.md dags/
 
-# Symlink scripts directory (if not already mounted in docker-compose)
-if [ ! -L scripts ]; then
-    rm -rf scripts
-    ln -sf ~/liquor_app/scripts scripts
+echo "Step 3: Configure environment variables..."
+# Set LIQUOR_APP_DIR in .env if not already set
+if ! grep -q "LIQUOR_APP_DIR" .env 2>/dev/null; then
+    echo "LIQUOR_APP_DIR=/root/liquor_app" >> .env
+    echo "  Added LIQUOR_APP_DIR to .env"
+else
+    echo "  LIQUOR_APP_DIR already configured"
 fi
 
-echo "Step 3: Verify symlinks..."
-ls -la dags/
-ls -la scripts/
+echo "Step 4: Verify files..."
+ls -la dags/ | grep whiskey
 
-echo "Step 4: Restart Airflow to pick up changes..."
+echo "Step 5: Restart Airflow to pick up changes..."
 cd ~/airflow
-docker compose restart airflow-scheduler airflow-dag-processor
+docker compose down
+docker compose up -d
 
 echo ""
 echo "=== Deployment Complete ==="

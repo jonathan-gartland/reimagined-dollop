@@ -83,8 +83,9 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-    - ${AIRFLOW_PROJ_DIR:-.}/scripts:/opt/airflow/scripts  # Python scripts
-    - ${AIRFLOW_PROJ_DIR:-.}/sql:/opt/airflow/sql  # SQL files
+    # Mount scripts and sql from liquor_app directory (not airflow directory)
+    - ${LIQUOR_APP_DIR:-..}/scripts:/opt/airflow/scripts
+    - ${LIQUOR_APP_DIR:-..}/sql:/opt/airflow/sql
     - ${CATALOG_BETA_HOST_PATH:-/Users/jonny/Projects/catalog-beta}:/catalog-beta  # catalog-beta project
     - ~/.ssh:/home/airflow/.ssh:ro  # SSH keys for git push (read-only)
   user: "${AIRFLOW_UID:-50000}:0"
